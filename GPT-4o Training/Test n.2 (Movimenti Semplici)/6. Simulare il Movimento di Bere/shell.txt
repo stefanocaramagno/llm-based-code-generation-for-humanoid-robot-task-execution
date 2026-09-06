@@ -1,0 +1,595 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. Tutti i diritti riservati.
+
+Installa la versione più recente di PowerShell per nuove funzionalità e miglioramenti. https://aka.ms/PSWindows
+
+PS C:\Users\stefa> python -u "c:\Users\stefa\Desktop\chatgpt_api_chat_upload_file_risposte_multiple.py"
+User: allega file
+Inserisci i percorsi dei file separati da virgola: C:\Users\stefa\Desktop\grasping-basketball_n1.py, C:\Users\stefa\Desktop\grasping-basketball_n2.py, C:\Users\stefa\Desktop\grasping-basketball_n3.py
+ChatGPT-4o mini: Il codice fornito sembra essere un esempio di programmazione per un robot antropomorfo chiamato Reachy, utilizzando la libreria `reachy_sdk`. Questo codice si occupa di eseguire una sequenza di movimenti per simulare un'azione di basket, che include il riconoscimento della palla, l'afferrarla e il lancio.
+
+### Analisi delle Funzioni Principali
+
+1. **look_at(target)**:
+   - Questa funzione permette al robot di orientare la testa verso un obiettivo specificato dalle coordinate `target` (x, y, z).
+
+2. **move_arm(target, duration)**:
+   - Muove il braccio destro verso una posizione specificata, calcolando le posizioni delle giunture necessarie tramite cinematica inversa. La durata del movimento è specificata come parametro.
+
+3. **throw_movement()**:
+   - Esegue il movimento di lancio della palla allargando la pinza e posizionando il braccio in una posizione angolare specifica.
+4. **basketball()**:
+   - Questa è la funzione principale che gestisce l'intero processo di afferraggio e lancio della palla. Include:
+     - Far guardare il robot verso la palla.
+     - Muovere il braccio sopra la palla evitando di toccarla.
+     - Afferrarla e quindi lanciarla.
+
+### Implementazione e Threading
+
+Il codice utilizza il threading per permettere al robot di eseguire la funzione `basketball()` in un thread separato, consentendo così al programma di continuare a mostrare le immagini in tempo reale dalla telecamera del robot.
+
+### Flusso di Esecuzione
+
+1. Connessione al robot.
+2. Avvio di un thread per la funzione `basketball()`.
+3. Un ciclo che mostra le immagini della telecamera finché il thread sta eseguendo l'azione di basket.
+4. Chiusura della finestra della telecamera e spegnimento graduale del braccio del robot al termine dell'azione.
+
+### Considerazioni
+
+- **Gestione degli Errori**: Non ci sono gestioni degli errori nel codice. Si potrebbe voler aggiungere controlli per verificare se il robot è in grado di muoversi verso le posizioni desiderate o se ci sono problemi di connessione.
+- **Ottimizzazione dei Tempi di Movimento**: I tempi di attesa (`time.sleep()`) potrebbero essere ottimizzati per migliorare l'efficienza e la reattività del robot.
+- **Parametrizzazione delle Posizioni**: Le posizioni delle palle sono hardcoded e potrebbero essere parametrizzate per aumentare la flessibilità dell'azione.
+
+Se hai domande specifiche su parti del codice o desideri esplorare funzionalità aggiuntive, fammelo sapere!
+User: Sulla base degli script Python che ti ho lasciato in allegato, sviluppa uno script Python che permetta a Reachy di simulare il movimento di bere. Utilizzare la libreria Reachy SDK (versione 0.5.4).
+
+Risposta 1:
+Per far simulare a Reachy il movimento di "bere", possiamo progettare uno script che esegue una serie di movimenti che imitano il gesto di portare una bottiglia o un bicchiere alla bocca. Assumeremo che Reachy abbia una mano o una pinza che può afferrare un oggetto e un braccio che può muoversi in modo appropriato.
+
+Ecco un esempio di script Python che implementa il movimento di bere:
+
+```python
+from reachy_sdk import ReachySDK
+from reachy_sdk.trajectory import goto
+from reachy_sdk.trajectory import InterpolationMode
+import time
+import numpy as np
+
+# Funzione per muovere il braccio verso una posizione target con una durata specificata
+def move_arm(target, duration):
+    # Creazione della matrice target per la cinematica inversa
+    target_matrix = np.array([
+        [0, 0, -1, target[0]],
+        [0, 1, 0, target[1]],
+        [1, 0, 0, target[2]],
+        [0, 0, 0, 1],
+    ])
+
+    # Calcolo delle posizioni delle giunture usando la cinematica inversa
+    joint_pos = reachy.r_arm.inverse_kinematics(target_matrix)
+
+    # Accensione del braccio destro
+    reachy.turn_on('r_arm')
+
+    # Movimento del braccio verso le posizioni delle giunture calcolate
+    goto({joint: pos for joint, pos in zip(reachy.r_arm.joints.values(), joint_pos)}, duration=duration)
+
+# Funzione per eseguire il movimento di bere
+def drink_movement():
+    # Posizione iniziale sopra la testa del robot
+    initial_position = np.array([0.4, -0.1, 0.5])
+    move_arm(initial_position, 1.0)
+    time.sleep(1.0)
+
+    # Posizione per afferrare il bicchiere
+    cup_position = np.array([0.4, -0.1, 0.0])
+    move_arm(cup_position, 1.0)
+    time.sleep(1.0)
+
+    # Apertura della pinza per afferrare il bicchiere
+    reachy.r_arm.r_gripper.goal_position = -60  # Apertura della pinza
+    time.sleep(1.0)
+
+    # Muovere il braccio verso la bocca
+    mouth_position = np.array([0.4, -0.1, 0.15])
+    move_arm(mouth_position, 1.0)
+    time.sleep(1.0)
+
+    # Simulazione del bere: mantenere la posizione per un momento
+    time.sleep(2.0)
+
+    # Rimuovere il bicchiere dalla bocca
+    move_arm(cup_position, 1.0)
+    time.sleep(1.0)
+
+    # Chiusura della pinza
+    reachy.r_arm.r_gripper.goal_position = -10  # Chiusura della pinza
+    time.sleep(1.0)
+
+    # Tornare alla posizione iniziale
+    move_arm(initial_position, 1.0)
+
+# Codice eseguibile principale
+if __name__ == "__main__":
+    # Connessione al robot Reachy
+    reachy = ReachySDK(host='localhost')
+
+    # Eseguire il movimento di bere
+    drink_movement()
+
+    # Spegnere il braccio destro del robot in modo graduale
+    reachy.turn_off_smoothly('r_arm')
+
+    # Uscire dal programma
+    exit()
+```
+
+### Descrizione dello Script
+
+1. **Funzione `move_arm(target, duration)`**: Questa funzione muove il braccio destro verso una posizione target calcolando le posizioni delle giunture usando la cinematica inversa.
+
+2. **Funzione `drink_movement()`**: Questa funzione simula il movimento di bere:
+   - Muove il braccio in una posizione iniziale sopra la testa.
+   - Sposta il braccio verso una posizione che rappresenta il bicchiere.
+   - Apre la pinza per afferrare il bicchiere.
+   - Muove il braccio verso la bocca per simulare il bere.
+   - Mantiene la posizione per un momento per simulare l'atto di bere.
+   - Riporta il braccio alla posizione iniziale e chiude la pinza.
+
+3. **Codice principale**: Connette il robot e avvia il movimento di bere.
+
+### Considerazioni
+- Potresti voler adattare le posizioni in base alla configurazione specifica del robot e alla posizione del "bicchiere" nel tuo ambiente.
+- Assicurati che la pinza del robot sia in grado di afferrare e tenere un oggetto virtuale.
+- Potresti voler aggiungere controlli di errore o di stato per gestire eventuali problemi di movimento o di connessione.
+
+Se hai bisogno di ulteriori modifiche o spiegazioni, fammelo sapere!
+
+
+Risposta 2:
+Per simulare il movimento di bere con il robot Reachy utilizzando la libreria Reachy SDK (versione 0.5.4), possiamo progettare uno script che fa compiere al robot una serie di movimenti. L'idea è che il robot afferri un bicchiere (simulato) e porti il bicchiere alla bocca.
+
+Ecco un esempio di come potrebbe apparire questo script:
+
+```python
+from reachy_sdk import ReachySDK
+from reachy_sdk.trajectory import goto
+from reachy_sdk.trajectory import InterpolationMode
+import time
+import numpy as np
+
+# Funzione per muovere il braccio del robot verso una posizione target con una durata specificata
+def move_arm(target, duration):
+    # Creazione della matrice target per la cinematica inversa
+    target_matrix = np.array([
+        [0, 0, -1, target[0]],
+        [0, 1, 0, target[1]],
+        [1, 0, 0, target[2]],
+        [0, 0, 0, 1],
+    ])
+
+    # Calcolo delle posizioni delle giunture usando la cinematica inversa
+    joint_positions = reachy.r_arm.inverse_kinematics(target_matrix)
+
+    # Accensione del braccio destro
+    reachy.turn_on('r_arm')
+
+    # Movimento del braccio verso le posizioni delle giunture calcolate
+    goto({joint: pos for joint, pos in zip(reachy.r_arm.joints.values(), joint_positions)}, duration=duration)
+
+# Funzione per simulare il movimento di bere
+def drinking_movement():
+    # Posizione iniziale del bicchiere
+    glass_position = np.array([0.4, -0.2, 0.1])  # Cambia le coordinate in base alla tua scena
+
+    # Muovere il braccio verso il bicchiere
+    move_arm(glass_position, duration=2.0)
+    time.sleep(1.0)  # Attendere che il braccio raggiunga la posizione
+
+    # Afferrando il bicchiere (simulazione)
+    reachy.r_arm.r_gripper.goal_position = -50  # Apertura della pinza per afferrare il bicchiere
+    time.sleep(1.0)
+
+    # Portare il bicchiere alla bocca
+    mouth_position = np.array([0.2, -0.1, 0.3])  # Cambia le coordinate in base alla tua scena
+    move_arm(mouth_position, duration=2.0)
+    time.sleep(1.0)  # Attendere che il braccio raggiunga la posizione
+
+    # Simulazione di bere (chiudere la pinza per "bere")
+    reachy.r_arm.r_gripper.goal_position = -80  # Chiusura della pinza
+    time.sleep(1.0)
+
+    # Riportare il bicchiere nella posizione iniziale
+    move_arm(glass_position, duration=2.0)
+    time.sleep(1.0)
+
+    # Rilasciare il bicchiere
+    reachy.r_arm.r_gripper.goal_position = -50  # Apertura della pinza
+    time.sleep(1.0)
+
+# Codice eseguibile principale
+if __name__ == "__main__":
+    # Connessione al robot Reachy
+    reachy = ReachySDK(host='localhost')
+
+    # Eseguire il movimento di bere
+    drinking_movement()
+
+    # Spegnere il braccio destro del robot in modo graduale
+    reachy.turn_off_smoothly('r_arm')
+
+    # Uscire dal programma
+    exit()
+```
+
+### Spiegazione dello Script
+
+1. **Connessione al Robot**: La connessione a Reachy avviene attraverso `ReachySDK`.
+
+2. **Funzione `move_arm`**: Questa funzione muove il braccio destro verso una posizione specificata utilizzando la cinematica inversa.
+
+3. **Funzione `drinking_movement`**: Qui si simulano i movimenti di bere:
+   - Si muove il braccio verso la posizione del bicchiere.
+   - Si simula l'afferraggio del bicchiere.
+   - Si porta il bicchiere verso la bocca.
+   - Si simula il movimento di bere chiudendo la pinza.
+   - Si riporta il bicchiere alla posizione iniziale e si rilascia.
+
+### Note
+
+- Le posizioni del bicchiere e della bocca (`glass_position` e `mouth_position`) sono esemplificative e potrebbero dover essere regolate in base alla configurazione del robot e all'ambiente.
+- Assicurati che il robot sia in un ambiente sicuro durante l'esecuzione di questi movimenti per evitare collisioni.
+- Potrebbe essere utile implementare delle gestioni di errore per garantire che i movimenti vengano eseguiti correttamente.
+
+Se hai ulteriori richieste o domande, sentiti libero di chiedere!
+
+
+Risposta 3:
+Per simulare il movimento di bere con il robot Reachy utilizzando la libreria Reachy SDK (versione 0.5.4), dobbiamo considerare una sequenza di movimenti che includa il posizionamento del braccio verso un bicchiere (o un oggetto simile) e il movimento della testa per guardare l'oggetto mentre il robot "beve".
+
+Di seguito è riportato un esempio di script Python che implementa questa funzionalità:
+
+```python
+from reachy_sdk import ReachySDK
+from reachy_sdk.trajectory import goto
+from reachy_sdk.trajectory import InterpolationMode
+import time
+import cv2 as cv
+import numpy as np
+from threading import Thread
+
+# Variabile globale per tenere traccia se il thread è in esecuzione
+thread_running = False
+
+# Funzione per far guardare il robot verso un obiettivo
+def look_at(target):
+    reachy.head.look_at(target[0], target[1], target[2], 1.0)
+
+# Funzione per muovere il braccio del robot verso una posizione target con una durata specificata
+def move_arm(target, duration):
+    target_matrix = np.array([
+        [0, 0, -1, target[0]],
+        [0, 1, 0, target[1]],
+        [1, 0, 0, target[2]],
+        [0, 0, 0, 1],
+    ])
+
+    joint_pos = reachy.r_arm.inverse_kinematics(target_matrix)
+    reachy.turn_on('r_arm')
+    goto({joint: pos for joint, pos in zip(reachy.r_arm.joints.values(), joint_pos)}, duration=duration)
+
+# Funzione per simulare il movimento di bere
+def drinking_movement():
+    # Posizione del bicchiere (in coordinate relative a Reachy)
+    glass_position = np.array([0.4, -0.2, -0.1])  # Modifica questa posizione in base alla tua configurazione
+
+    # Far guardare il robot verso il bicchiere
+    look_at(glass_position)
+
+    # Portare il braccio verso il bicchiere
+    move_arm(glass_position, 2.0)
+    time.sleep(1.0)
+
+    # Simulare il movimento di bere
+    # Portare il bicchiere alla bocca
+    mouth_position = np.array([0.3, -0.2, 0.0])  # Posizione della bocca
+    move_arm(mouth_position, 1.0)
+    time.sleep(1.0)
+
+    # Simulare un movimento di "sorso" (piccolo movimento su e giù)
+    for _ in range(3):  # Esegui il movimento di "sorso" 3 volte
+        move_arm(mouth_position + np.array([0, 0, 0.05]), 0.5)  # Alzare leggermente
+        time.sleep(0.5)
+        move_arm(mouth_position, 0.5)  # Tornare giù
+        time.sleep(0.5)
+
+    # Riportare il braccio in una posizione neutra
+    neutral_position = np.array([0.4, -0.2, -0.2])  # Posizione neutra
+    move_arm(neutral_position, 2.0)
+
+    global thread_running
+    thread_running = False
+
+# Codice eseguibile principale
+if __name__ == "__main__":
+    reachy = ReachySDK(host='localhost')
+
+    t = Thread(target=lambda: drinking_movement())
+    t.daemon = True
+    t.start()
+
+    thread_running = True
+
+    # Loop per mostrare le immagini della telecamera destra del robot
+    while thread_running:
+        cv.imshow('Right camera', reachy.right_camera.last_frame)
+        cv.waitKey(30)
+
+    cv.destroyAllWindows()
+    reachy.turn_off_smoothly('r_arm')
+    exit()
+```
+
+### Descrizione dello Script
+
+1. **look_at(target)**: Questa funzione fa sì che la testa del robot si orienti verso il "bicchiere".
+
+2. **move_arm(target, duration)**: Questa funzione muove il braccio del robot verso una posizione specificata.
+
+3. **drinking_movement()**: Questa è la funzione principale che simula il movimento di bere:
+   - Il robot guarda verso il bicchiere.
+   - Muove il braccio verso il bicchiere.
+   - Porta il braccio verso la bocca e simula il movimento di bere con piccoli movimenti su e giù.
+   - Riporta il braccio in una posizione neutra alla fine.
+
+4. **Threading**: Il movimento di bere viene eseguito in un thread separato, permettendo al programma di continuare a visualizzare il feed della telecamera.
+
+5. **Posizioni**: Le posizioni del bicchiere e della bocca sono impostate in coordinate relative a Reachy. Potrebbe essere necessario modificarle in base alla configurazione del robot e all'ambiente.
+
+### Considerazioni
+
+- Assicurati che il robot sia in grado di eseguire i movimenti senza collisioni.
+- Puoi regolare le posizioni e le durate in base alla tua configurazione specifica per rendere il movimento più naturale.
+- Potresti voler aggiungere delle gestioni degli errori per migliorare la robustezza dello script.
+
+Se hai bisogno di ulteriori modifiche o chiarimenti, fammi sapere!
+
+
+Risposta 4:
+Per simulare il movimento di bere con il robot Reachy utilizzando la libreria Reachy SDK (versione 0.5.4), possiamo progettare uno script che prevede i seguenti passi:
+
+1. **Far guardare il robot verso il bicchiere**.
+2. **Movimento del braccio verso il bicchiere**.
+3. **Posizionare la pinza per afferrare il bicchiere**.
+4. **Portare il bicchiere alla bocca**.
+5. **Eseguire un movimento di "bere"**.
+6. **Riportare il bicchiere alla posizione iniziale**.
+
+Ecco un esempio di codice Python per realizzare questo movimento:
+
+```python
+from reachy_sdk import ReachySDK
+from reachy_sdk.trajectory import goto
+from reachy_sdk.trajectory import InterpolationMode
+import time
+import numpy as np
+from threading import Thread
+
+# Variabile globale per tenere traccia se il thread è in esecuzione
+thread_running = False
+
+def look_at(target):
+    reachy.head.look_at(target[0], target[1], target[2], 1.0)
+
+def move_arm(target, duration):
+    target_matrix = np.array([
+        [0, 0, -1, target[0]],
+        [0, 1, 0, target[1]],
+        [1, 0, 0, target[2]],
+        [0, 0, 0, 1],
+    ])
+    joint_pos = reachy.r_arm.inverse_kinematics(target_matrix)
+    reachy.turn_on('r_arm')
+    goto({joint: pos for joint, pos in zip(reachy.r_arm.joints.values(), joint_pos)}, duration=duration)
+
+def drink_movement():
+    # Apertura della pinza per afferrare il bicchiere
+    reachy.r_arm.r_gripper.goal_position = -60
+    time.sleep(1.0)
+
+    # Posizione per portare il bicchiere alla bocca
+    drink_position = {
+        reachy.r_arm.r_shoulder_pitch: -30,
+        reachy.r_arm.r_shoulder_roll: 15,
+        reachy.r_arm.r_arm_yaw: 0,
+        reachy.r_arm.r_elbow_pitch: -30,
+        reachy.r_arm.r_forearm_yaw: 0,
+        reachy.r_arm.r_wrist_pitch: 0,
+        reachy.r_arm.r_wrist_roll: 0,
+    }
+
+    # Movimento verso la posizione di bere
+    goto(goal_positions=drink_position, duration=1.0, interpolation_mode=InterpolationMode.MINIMUM_JERK)
+    time.sleep(1.0)
+
+    # Simulazione del movimento di bere
+    # Per esempio, un leggero movimento su e giù
+    for _ in range(3):
+        # Alza il bicchiere
+        reachy.r_arm.r_wrist_pitch.goal_position += 10
+        time.sleep(0.5)
+        # Riporta il bicchiere giù
+        reachy.r_arm.r_wrist_pitch.goal_position -= 10
+        time.sleep(0.5)
+
+    # Riportare il braccio alla posizione iniziale
+    return_to_start_position()
+
+def return_to_start_position():
+    # Posizione iniziale del braccio
+    initial_position = {
+        reachy.r_arm.r_shoulder_pitch: 0,
+        reachy.r_arm.r_shoulder_roll: 0,
+        reachy.r_arm.r_arm_yaw: 0,
+        reachy.r_arm.r_elbow_pitch: 0,
+        reachy.r_arm.r_forearm_yaw: 0,
+        reachy.r_arm.r_wrist_pitch: 0,
+        reachy.r_arm.r_wrist_roll: 0,
+    }
+    goto(goal_positions=initial_position, duration=1.0, interpolation_mode=InterpolationMode.MINIMUM_JERK)
+
+def drink():
+    # Posizione del bicchiere (simulata)
+    glass_position = np.array([0.5, -0.3, -0.2])  # Modifica le coordinate in base alla posizione del bicchiere
+
+    # Far guardare il robot verso il bicchiere
+    look_at(glass_position)
+
+    # Muovere il braccio verso il bicchiere
+    move_arm(glass_position, 2.0)
+
+    # Eseguire il movimento di bere
+    drink_movement()
+
+    # Aggiornare lo stato del thread
+    global thread_running
+    thread_running = False
+
+if __name__ == "__main__":
+    # Connessione al robot Reachy
+    reachy = ReachySDK(host='localhost')
+
+    # Creare e avviare un thread per eseguire la funzione drink
+    t = Thread(target=lambda: drink())
+    t.daemon = True
+    t.start()
+
+    # Impostare lo stato del thread come in esecuzione
+    thread_running = True
+
+    # Loop per mostrare le immagini della telecamera destra del robot
+    while thread_running:
+        cv.imshow('Right camera', reachy.right_camera.last_frame)
+        cv.waitKey(30)
+
+    # Chiudere tutte le finestre di OpenCV
+    cv.destroyAllWindows()
+
+    # Spegnere il braccio destro del robot in modo graduale
+    reachy.turn_off_smoothly('r_arm')
+
+    # Uscire dal programma
+    exit()
+```
+
+### Note sul Codice
+- **Posizione del Bicchiere**: La posizione del bicchiere (`glass_position`) è impostata in modo arbitrario. Potrebbe essere necessario regolarla in base alla configurazione reale del robot e del bicchiere.
+- **Movimento di Bere**: Il movimento di "bere" è simulato con un semplice movimento su e giù. Puoi personalizzarlo ulteriormente in base al comportamento desiderato.
+- **Controllo della Pinza**: La pinza è aperta per afferrare il bicchiere. Assicurati che la posizione iniziale e finale della pinza sia appropriata.
+- **Gestione degli Errori**: Non è inclusa la gestione degli errori. Potresti voler aggiungere controlli per assicurarti che il robot possa muoversi correttamente verso le posizioni desiderate.
+
+Assicurati di testare il codice in un ambiente sicuro per evitare collisioni o danni al robot. Se hai domande o necessiti di ulteriori modifiche, fammelo sapere!
+
+
+Risposta 5:
+Per far simulare a Reachy il movimento di bere, dovremo definire una sequenza di movimenti che coinvolga il braccio del robot mentre si avvicina a un "bicchiere" (o un oggetto simile). L'idea è di orientare il braccio in modo che il "bicchiere" possa essere portato alla bocca del robot, quindi dovremo definire le posizioni per il braccio e la mano.
+
+Di seguito è riportato un esempio di script Python che utilizza la libreria Reachy SDK (versione 0.5.4) per simulare questo movimento:
+
+```python
+from reachy_sdk import ReachySDK
+from reachy_sdk.trajectory import goto
+from reachy_sdk.trajectory import InterpolationMode
+import time
+import numpy as np
+from threading import Thread
+
+# Variabile globale per tenere traccia se il thread è in esecuzione
+thread_running = False
+
+def look_at(target):
+    reachy.head.look_at(target[0], target[1], target[2], 1.0)
+
+def move_arm(target, duration):
+    target_matrix = np.array([
+        [0, 0, -1, target[0]],
+        [0, 1, 0, target[1]],
+        [1, 0, 0, target[2]],
+        [0, 0, 0, 1],
+    ])
+
+    joint_pos = reachy.r_arm.inverse_kinematics(target_matrix)
+    reachy.turn_on('r_arm')
+    goto({joint: pos for joint, pos in zip(reachy.r_arm.joints.values(), joint_pos)}, duration=duration)
+
+def drink_movement():
+    # Posizione del bicchiere (ipotetica)
+    glass_position = np.array([0.4, -0.2, -0.1])  # Coordinate XYZ del bicchiere
+
+    # Far guardare il robot verso il bicchiere
+    look_at(glass_position)
+
+    # Muovere il braccio verso la posizione del bicchiere
+    move_arm(glass_position, 2.0)
+    time.sleep(1.0)
+
+    # Posizione per avvicinare il bicchiere alla bocca
+    mouth_position = np.array([0.4, -0.2, 0.1])  # Coordinate XYZ per portare il bicchiere alla bocca
+    move_arm(mouth_position, 1.0)
+    time.sleep(1.0)
+
+    # Simulazione di "bere" (un movimento di su e giù)
+    for _ in range(3):
+        move_arm(mouth_position + np.array([0, 0, 0.05]), 0.5)  # Alzare il bicchiere
+        time.sleep(0.5)
+        move_arm(mouth_position, 0.5)  # Riportare il bicchiere alla bocca
+        time.sleep(0.5)
+
+    # Riportare il braccio alla posizione iniziale
+    initial_position = np.array([0.5, -0.3, 0])  # Posizione iniziale del braccio
+    move_arm(initial_position, 2.0)
+
+    global thread_running
+    thread_running = False
+
+if __name__ == "__main__":
+    reachy = ReachySDK(host='localhost')
+
+    # Creare e avviare un thread per eseguire il movimento di bere
+    t = Thread(target=drink_movement)
+    t.daemon = True
+    t.start()
+
+    thread_running = True
+
+    # Loop per mostrare le immagini della telecamera destra del robot
+    while thread_running:
+        cv.imshow('Right camera', reachy.right_camera.last_frame)
+        cv.waitKey(30)
+
+    cv.destroyAllWindows()
+    reachy.turn_off_smoothly('r_arm')
+    exit()
+```
+
+### Descrizione del Codice:
+
+1. **look_at(target)**: Questa funzione orienta la testa del robot verso il bicchiere.
+2. **move_arm(target, duration)**: Muove il braccio destro del robot verso una posizione target.
+3. **drink_movement()**:
+   - Il robot guarda verso il bicchiere.
+   - Il braccio si muove verso la posizione del bicchiere.
+   - Poi si muove verso la posizione della bocca.
+   - Simula il movimento di bere sollevando e abbassando il "bicchiere" (in realtà il braccio).
+   - Infine, riporta il braccio a una posizione iniziale.
+
+4. **Threading**: Utilizza un thread per eseguire il movimento di bere in modo asincrono, permettendo di visualizzare la telecamera del robot.
+
+### Note:
+- Le posizioni specifiche (coordinate XYZ) per il bicchiere e la bocca devono essere adattate in base alla configurazione fisica del robot e all'ambiente in cui si trova.
+- Assicurati di avere la libreria `reachy_sdk` installata e configurata correttamente.
+
+User: esci
+Chat terminata.
+PS C:\Users\stefa>

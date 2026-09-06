@@ -1,0 +1,537 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. Tutti i diritti riservati.
+
+Installa la versione più recente di PowerShell per nuove funzionalità e miglioramenti. https://aka.ms/PSWindows
+
+PS C:\Users\stefa> python -u "c:\Users\stefa\Desktop\chatgpt_api_chat_upload_file_risposte_multiple.py"
+User: allega file
+Inserisci i percorsi dei file separati da virgola: C:\Users\stefa\Desktop\grasping-basketball_n1.py, C:\Users\stefa\Desktop\grasping-basketball_n2.py, C:\Users\stefa\Desktop\grasping-basketball_n3.py, C:\Users\stefa\Desktop\head-orientation-basketball.py
+ChatGPT-4o mini: Il codice che hai condiviso implementa una serie di funzioni per controllare un robot antropomorfo, Reachy, nel contesto di un'attività di basket. Di seguito, fornirò una panoramica delle principali funzionalità e dei componenti del codice:
+
+### Panoramica del Codice
+
+1. **Importazione delle librerie**:
+   - `reachy_sdk`: SDK per controllare il robot Reachy.
+   - `cv2`: Libreria OpenCV per la gestione delle immagini.
+   - `numpy`: Libreria per il calcolo numerico.
+   - `threading`: Per gestire l'esecuzione concorrente.
+
+2. **Variabili globali**:
+   - `thread_running`: Indica se il thread che esegue il movimento del robot è attivo.
+
+3. **Funzioni principali**:
+   - `look_at(target)`: Fa sì che la testa del robot guardi un obiettivo specificato da un array di coordinate 3D.
+   - `move_arm(target, duration)`: Muove il braccio destro del robot verso una posizione specificata utilizzando la cinematica inversa. La durata del movimento è definita dal parametro `duration`.
+   - `throw_movement()`: Esegue il movimento di lancio, aprendo la pinza e posizionando il braccio in un angolo specificato.
+   - `basketball()`: Funzione principale che gestisce l'intero processo di afferrare e lanciare una palla da basket. Include i seguenti passaggi:
+     - Guardare la palla.
+     - Muovere il braccio sopra la palla.
+     - Afferrare la palla.
+     - Alzare il braccio e lanciare la palla.
+
+4. **Esecuzione del programma**:
+   - La funzione `basketball()` viene eseguita in un thread separato per consentire la visualizzazione in tempo reale della telecamera del robot.
+   - Il loop principale continua a mostrare il video dalla telecamera destra del robot fino a quando il movimento non è completato.
+
+### Considerazioni e Miglioramenti
+
+- **Stabilità del movimento**: Potresti voler implementare controlli più sofisticati per garantire che il robot non si scontri con la palla o altri oggetti quando si muove.
+- **Feedback visivo**: Potresti integrare sistemi di feedback visivo per migliorare l'interazione del robot con l'ambiente circostante.
+- **Gestione degli errori**: Implementa la gestione degli errori per gestire eventuali problemi di connessione o movimenti imprevisti.
+- **Modularità**: Potresti considerare di modularizzare ulteriormente le funzioni per migliorare la leggibilità e la manutenzione del codice.
+
+Se hai domande specifiche su parti del codice o su come implementare determinate funzionalità, sentiti libero di chiedere!
+User: Sulla base degli script Python che ti ho lasciato in allegato, sviluppa uno script Python che permetta a Reachy di afferrare una pallina da basket sul tavolo (quindi che compia un'azione di grasping). In particolare, la pallina da basket è situata un po' di centimetri più a destra rispetto alla visuale frontale inziale di Reachy, un po' di centimetri sopra il centro del tavolo. Le coordinate del tavolo rispetto al sistema di riferimento di Reachy sono le seguenti:(x,y,z) = (0,3187999,-0,01479991,-1,204). Utilizzare la libreria Reachy SDK (versione 0.5.4).
+
+Risposta 1:
+Per sviluppare uno script Python che consenta a Reachy di afferrare una pallina da basket situata su un tavolo, possiamo seguire il modello delle funzioni già presenti negli script forniti. L'obiettivo principale è calcolare la posizione della pallina rispetto al sistema di riferimento di Reachy e poi utilizzare la cinematica inversa per muovere il braccio del robot in modo che afferri la pallina.
+
+Ecco un esempio di script Python che implementa questa funzionalità:
+
+```python
+from reachy_sdk import ReachySDK
+from reachy_sdk.trajectory import goto
+from reachy_sdk.trajectory import InterpolationMode
+import time
+import numpy as np
+
+# Funzione per far guardare il robot verso un obiettivo
+def look_at(target):
+    reachy.head.look_at(target[0], target[1], target[2], 1.0)
+
+# Funzione per muovere il braccio del robot verso una posizione target con una durata specificata
+def move_arm(target, duration):
+    # Creazione della matrice target per la cinematica inversa
+    target_matrix = np.array([
+        [0, 0, -1, target[0]],
+        [0, 1, 0, target[1]],
+        [1, 0, 0, target[2]],
+        [0, 0, 0, 1],
+    ])
+
+    # Calcolo delle posizioni delle giunture usando la cinematica inversa
+    joint_pos_ball = reachy.r_arm.inverse_kinematics(target_matrix)
+
+    # Accensione del braccio destro
+    reachy.turn_on('r_arm')
+
+    # Movimento del braccio verso le posizioni delle giunture calcolate
+    goto({joint: pos for joint, pos in zip(reachy.r_arm.joints.values(), joint_pos_ball)}, duration=duration)
+
+# Funzione per eseguire l'azione di grasping
+def grasp_ball():
+    # Apertura della pinza
+    reachy.r_arm.r_gripper.goal_position = -60  # Apertura massima
+
+    # Attendere un momento per l'apertura
+    time.sleep(1.0)
+
+    # Posizione della pallina da basket (in base alla posizione del tavolo)
+    ball_position = np.array([0.1, 0.3187999, -0.01479991])  # Adjust x as needed for the ball's position
+
+    # Far guardare il robot verso la palla
+    look_at(ball_position)
+
+    # Muovere il braccio sopra la palla
+    above_ball = np.array([ball_position[0], ball_position[1], ball_position[2] + 0.1])  # Posizione sopra la palla
+    move_arm(above_ball, 1.0)
+
+    # Muovere il braccio verso la palla
+    move_arm(ball_position, 1.0)
+    time.sleep(1.0)
+
+    # Chiudere la pinza per afferrare la palla
+    reachy.r_arm.r_gripper.goal_position = -40  # Posizione per afferrare
+    time.sleep(0.5)
+
+    # Alzare il braccio con la palla
+    move_arm(np.array([ball_position[0], ball_position[1], ball_position[2] + 0.2]), 1.0)  # Sollevare la palla
+
+# Codice eseguibile principale
+if __name__ == "__main__":
+    # Connessione al robot Reachy
+    reachy = ReachySDK(host='localhost')
+
+    # Eseguire l'azione di afferrare la pallina
+    grasp_ball()
+
+    # Spegnere il braccio destro del robot in modo graduale
+    reachy.turn_off_smoothly('r_arm')
+
+    # Uscire dal programma
+    exit()
+```
+
+### Spiegazione del Codice
+
+1. **Importazioni**: Vengono importate le librerie necessarie, inclusa la `ReachySDK`.
+
+2. **Funzioni**:
+   - `look_at(target)`: Fa sì che la testa del robot guardi la posizione della pallina.
+   - `move_arm(target, duration)`: Muove il braccio destro del robot verso la posizione specificata usando la cinematica inversa.
+   - `grasp_ball()`: Questa funzione gestisce il processo di afferrare la pallina, che include:
+     - Apertura della pinza.
+     - Calcolo della posizione della pallina (aggiustando l'asse x se necessario).
+     - Movimento del braccio sopra la palla e quindi verso di essa.
+     - Chiusura della pinza per afferrare la palla.
+     - Sollevamento del braccio con la palla.
+
+3. **Esecuzione**: Viene stabilita una connessione al robot Reachy e viene invocata la funzione `grasp_ball()`.
+
+### Note Finali
+
+Assicurati di testare il codice in un ambiente sicuro e di avere un controllo adeguato sul robot per evitare collisioni. Potresti voler regolare le coordinate della pallina in base alla sua posizione effettiva.
+
+
+Risposta 2:
+Per far sì che il robot Reachy afferri una pallina da basket posizionata sul tavolo, possiamo costruire uno script Python basato sugli elementi forniti nei tuoi script precedenti. Assumendo che la pallina si trovi a destra rispetto alla posizione centrale del tavolo e leggermente sopra, possiamo definire le coordinate della pallina e implementare le funzioni necessarie per eseguire l'azione di grasping.
+
+### Script Python
+
+Ecco uno script che implementa quanto richiesto:
+
+```python
+from reachy_sdk import ReachySDK
+from reachy_sdk.trajectory import goto
+from reachy_sdk.trajectory import InterpolationMode
+import time
+import numpy as np
+
+def look_at(target):
+    reachy.head.look_at(target[0], target[1], target[2], 1.0)
+
+def move_arm(target, duration):
+    target_matrix = np.array([
+        [0, 0, -1, target[0]],
+        [0, 1, 0, target[1]],
+        [1, 0, 0, target[2]],
+        [0, 0, 0, 1],
+    ])
+
+    joint_positions = reachy.r_arm.inverse_kinematics(target_matrix)
+    reachy.turn_on('r_arm')
+    goto({joint: pos for joint, pos in zip(reachy.r_arm.joints.values(), joint_positions)}, duration=duration)
+
+def grasp_ball():
+    # Apertura della pinza
+    reachy.r_arm.r_gripper.goal_position = -60  # Imposta la posizione di apertura
+
+    # Aspetta un attimo per l'apertura
+    time.sleep(1.0)
+
+    # Posizione della pallina da basket
+    ball_position = np.array([0.1, 0.3187999, -0.01479991])  # Coordinate della pallina da basket
+
+    # Muovere il braccio verso la pallina
+    move_arm(ball_position, duration=2.0)
+
+    # Chiusura della pinza per afferrare la pallina
+    reachy.r_arm.r_gripper.goal_position = -40  # Imposta la posizione di chiusura
+    time.sleep(0.5)
+
+    # Muovere il braccio leggermente verso l'alto per sollevare la pallina
+    above_ball_position = np.array([0.1, 0.3187999, 0.1])  # Posizione sopra la pallina
+    move_arm(above_ball_position, duration=2.0)
+
+if __name__ == "__main__":
+    # Connessione al robot Reachy
+    reachy = ReachySDK(host='localhost')
+
+    # Far guardare il robot verso la pallina
+    look_at([0.1, 0.3187999, -0.01479991])  # Coordinate della pallina
+
+    # Eseguire l'azione di afferraggio
+    grasp_ball()
+
+    # Spegnere il braccio destro del robot in modo graduale
+    reachy.turn_off_smoothly('r_arm')
+
+    # Uscire dal programma
+    exit()
+```
+
+### Descrizione dello Script
+
+1. **Importazione delle librerie**: Viene importato `ReachySDK`, `numpy`, e altre librerie necessarie.
+
+2. **Definizione delle funzioni**:
+   - `look_at(target)`: Muove la testa del robot per guardare un obiettivo specifico.
+   - `move_arm(target, duration)`: Muove il braccio del robot verso una posizione target utilizzando la cinematica inversa.
+   - `grasp_ball()`: Apre la pinza, si muove verso la pallina, chiude la pinza per afferrare la pallina e poi solleva leggermente il braccio.
+
+3. **Codice principale**:
+   - Si connette al robot Reachy e lo fa guardare verso la pallina.
+   - Esegue l'azione di afferraggio.
+   - Spegne gradualmente il braccio destro.
+
+### Note
+- Assicurati di avere la configurazione corretta del robot e che le coordinate siano impostate in modo appropriato rispetto alla posizione della pallina.
+- Verifica la posizione della pallina e regola le coordinate se necessario per garantire un grasping corretto.
+- Potrebbe essere utile monitorare il feedback visivo del robot mentre esegue il grasping per garantire che l'azione venga eseguita correttamente.
+
+
+Risposta 3:
+Per sviluppare uno script Python che permetta a Reachy di afferrare una pallina da basket situata sopra il tavolo, possiamo adattare il codice fornito in precedenza. Dobbiamo calcolare le coordinate della pallina da basket in base alla posizione del tavolo che hai fornito. Assumiamo che la pallina si trovi a qualche centimetro a destra e sopra il tavolo.
+
+Ecco un esempio di codice che implementa questa funzionalità:
+
+```python
+from reachy_sdk import ReachySDK
+from reachy_sdk.trajectory import goto
+from reachy_sdk.trajectory import InterpolationMode
+import time
+import numpy as np
+
+# Variabile globale per tenere traccia se il thread è in esecuzione
+thread_running = False
+
+# Funzione per far guardare il robot verso un obiettivo
+def look_at(target):
+    reachy.head.look_at(target[0], target[1], target[2], 1.0)
+
+# Funzione per muovere il braccio del robot verso una posizione target con una durata specificata
+def move_arm(target, duration):
+    target_matrix = np.array([
+        [0, 0, -1, target[0]],
+        [0, 1, 0, target[1]],
+        [1, 0, 0, target[2]],
+        [0, 0, 0, 1],
+    ])
+    joint_pos_ball = reachy.r_arm.inverse_kinematics(target_matrix)
+    reachy.turn_on('r_arm')
+    goto({joint: pos for joint, pos in zip(reachy.r_arm.joints.values(), joint_pos_ball)}, duration=duration)
+
+# Funzione per eseguire il movimento di afferraggio
+def grasp_ball():
+    # Apertura della pinza
+    reachy.r_arm.r_gripper.goal_position = -60
+    time.sleep(1.0)
+
+    # Coordinate della palla da basket
+    ball_position = np.array([0.05, 0.3187999, -0.01479991])  # x, y, z (5 cm a destra del centro del tavolo)
+
+    # Far guardare il robot verso la palla
+    look_at(ball_position)
+
+    # Muovere il braccio sopra la palla
+    above_ball = np.array([ball_position[0], ball_position[1], ball_position[2] + 0.1])  # 10 cm sopra la palla
+    move_arm(above_ball, 1.0)
+
+    # Posizionare il braccio sopra la palla
+    move_arm(ball_position, 1.0)
+
+    # Chiusura della pinza per afferrare la palla
+    reachy.r_arm.r_gripper.goal_position = -40
+    time.sleep(0.5)
+
+    # Alzare il braccio con la palla
+    move_arm(np.array([ball_position[0], ball_position[1], ball_position[2] + 0.2]), 1.0)  # Alzare di 20 cm
+
+    # Aggiornare lo stato del thread
+    global thread_running
+    thread_running = False
+
+# Codice eseguibile principale
+if __name__ == "__main__":
+    reachy = ReachySDK(host='localhost')
+
+    # Creare e avviare un thread per eseguire la funzione grasp_ball
+    t = Thread(target=lambda: grasp_ball())
+    t.daemon = True
+    t.start()
+
+    # Impostare lo stato del thread come in esecuzione
+    thread_running = True
+
+    # Loop per mantenere il programma in esecuzione fino al completamento del grasping
+    while thread_running:
+        time.sleep(0.1)
+
+    # Spegnere il braccio destro del robot in modo graduale
+    reachy.turn_off_smoothly('r_arm')
+
+    # Uscire dal programma
+    exit()
+```
+
+### Spiegazione del Codice
+
+1. **Posizione della Pallina**: La pallina è posizionata a `(x, y, z) = (0.05, 0.3187999, -0.01479991)`, quindi 5 cm a destra del centro del tavolo e alla stessa altezza del tavolo.
+
+2. **Funzioni di Movimento**:
+   - `look_at(target)`: Il robot guarda verso la pallina.
+   - `move_arm(target, duration)`: Muove il braccio del robot verso le coordinate specificate.
+
+3. **Funzione di Afferraggio**: La funzione `grasp_ball()` gestisce il processo di afferrare la pallina:
+   - Il robot guarda verso la pallina.
+   - Il braccio si muove sopra la pallina.
+   - Il braccio si posiziona sopra la pallina e chiude la pinza per afferrare.
+
+4. **Esecuzione Principale**: La funzione `grasp_ball()` viene eseguita in un thread separato, mentre il programma principale attende il completamento dell'operazione di afferraggio.
+
+### Note
+Assicurati di testare il codice in un ambiente sicuro, poiché il movimento del robot può essere impreciso e potrebbe causare collisioni. Inoltre, verifica che le posizioni siano corrette rispetto al sistema di riferimento di Reachy.
+
+
+Risposta 4:
+Ecco uno script Python che consente al robot Reachy di afferrare una pallina da basket posizionata su un tavolo, utilizzando le coordinate fornite. Lo script utilizza la libreria Reachy SDK e implementa il movimento di grasping.
+
+### Script Python per il Grasping della Pallina da Basket
+
+```python
+from reachy_sdk import ReachySDK
+from reachy_sdk.trajectory import goto
+from reachy_sdk.trajectory import InterpolationMode
+import time
+import numpy as np
+
+# Funzione per far guardare il robot verso un obiettivo
+def look_at(target):
+    reachy.head.look_at(target[0], target[1], target[2], 1.0)
+
+# Funzione per muovere il braccio del robot verso una posizione target
+def move_arm(target, duration):
+    # Creazione della matrice target per la cinematica inversa
+    target_matrix = np.array([
+        [0, 0, -1, target[0]],
+        [0, 1, 0, target[1]],
+        [1, 0, 0, target[2]],
+        [0, 0, 0, 1],
+    ])
+
+    # Calcolo delle posizioni delle giunture usando la cinematica inversa
+    joint_pos_ball = reachy.r_arm.inverse_kinematics(target_matrix)
+
+    # Accensione del braccio destro
+    reachy.turn_on('r_arm')
+
+    # Movimento del braccio verso le posizioni delle giunture calcolate
+    goto({joint: pos for joint, pos in zip(reachy.r_arm.joints.values(), joint_pos_ball)}, duration=duration)
+
+# Funzione per eseguire il grasping
+def grasp_ball():
+    # Apertura della pinza
+    reachy.r_arm.r_gripper.goal_position = -60  # Posizione di apertura
+    time.sleep(1.0)
+
+    # Posizione della pallina da basket (x, y, z) - aggiustata rispetto al centro del tavolo
+    ball_position = np.array([0.1, 0.3187999, -0.01479991])  # Modificare x in base alla posizione della palla
+
+    # Guardare verso la palla
+    look_at(ball_position)
+
+    # Muovere il braccio sopra la palla
+    above_ball = np.array([ball_position[0], ball_position[1], ball_position[2] + 0.1])  # 10 cm sopra la palla
+    move_arm(above_ball, 2.0)
+    time.sleep(1.0)
+
+    # Muovere il braccio verso la palla
+    move_arm(ball_position, 2.0)
+    time.sleep(1.0)
+
+    # Chiusura della pinza per afferrare la palla
+    reachy.r_arm.r_gripper.goal_position = -10  # Posizione di chiusura
+    time.sleep(1.0)
+
+    # Alzare il braccio con la palla
+    move_arm(np.array([ball_position[0], ball_position[1], ball_position[2] + 0.2]), 2.0)  # Alza di 20 cm
+    time.sleep(1.0)
+
+# Codice eseguibile principale
+if __name__ == "__main__":
+    # Connessione al robot Reachy
+    reachy = ReachySDK(host='localhost')
+
+    # Eseguire il movimento di grasping
+    grasp_ball()
+
+    # Spegnere il braccio destro del robot in modo graduale
+    reachy.turn_off_smoothly('r_arm')
+
+    # Uscire dal programma
+    exit()
+```
+
+### Descrizione dello Script
+
+1. **Funzioni**:
+   - `look_at(target)`: fa sì che la testa del robot guardi l'obiettivo.
+   - `move_arm(target, duration)`: muove il braccio destro del robot verso la posizione specificata usando la cinematica inversa.
+   - `grasp_ball()`: gestisce l'intero processo di afferrare la palla. Le azioni includono:
+     - Apertura della pinza.
+     - Movimento del braccio sopra la palla.
+     - Movimento del braccio verso la palla.
+     - Chiusura della pinza per afferrare la palla.
+     - Alzare il braccio con la palla.
+
+2. **Posizione della Pallina**:
+   - La posizione della pallina è definita in base alle coordinate fornite, con una leggera modifica per spostarla a destra. Assicurati di regolare la coordinata `x` in `ball_position` in base alla posizione esatta della pallina.
+
+3. **Esecuzione**:
+   - Lo script si connette al robot Reachy e avvia il processo di afferrare la palla.
+
+### Note
+
+- Assicurati che il robot sia correttamente configurato e che le coordinate siano accurate rispetto al suo sistema di riferimento.
+- Potrebbe essere necessario regolare i parametri (come le posizioni della pinza) in base alla specifica configurazione della tua applicazione.
+- Assicurati di avere i permessi necessari per controllare il robot e che le librerie siano installate correttamente.
+
+
+Risposta 5:
+Di seguito trovi un esempio di script Python che utilizza il Reachy SDK per far afferrare a Reachy una pallina da basket posizionata sul tavolo. Le coordinate del tavolo sono state incorporate nel codice, e il movimento è progettato per posizionare il braccio del robot sopra la pallina prima di afferrarla.
+
+### Script Python per il Grasping della Pallina da Basket
+
+```python
+from reachy_sdk import ReachySDK
+from reachy_sdk.trajectory import goto
+from reachy_sdk.trajectory import InterpolationMode
+import numpy as np
+import time
+
+# Funzione per far guardare il robot verso un obiettivo
+def look_at(target):
+    reachy.head.look_at(target[0], target[1], target[2], 1.0)
+
+# Funzione per muovere il braccio del robot verso una posizione target con una durata specificata
+def move_arm(target, duration):
+    target_matrix = np.array([
+        [0, 0, -1, target[0]],
+        [0, 1, 0, target[1]],
+        [1, 0, 0, target[2]],
+        [0, 0, 0, 1],
+    ])
+
+    joint_pos = reachy.r_arm.inverse_kinematics(target_matrix)
+    reachy.turn_on('r_arm')
+    goto({joint: pos for joint, pos in zip(reachy.r_arm.joints.values(), joint_pos)}, duration=duration)
+
+# Funzione per afferrare la pallina
+def grasp_ball():
+    # Coordinate del tavolo
+    table_position = np.array([0, 0.3187999, -0.01479991])  # Centro del tavolo
+
+    # Calcolo della posizione della pallina (a destra e sopra il centro del tavolo)
+    ball_position = np.array([table_position[0] + 0.1, table_position[1], table_position[2] + 0.05])  # Modifica le coordinate secondo necessità
+
+    # Far guardare il robot verso la pallina
+    look_at(ball_position)
+
+    # Muovere il braccio sopra la pallina
+    above_ball = np.array([ball_position[0], ball_position[1], ball_position[2] + 0.1])  # Posizione sopra la pallina
+    move_arm(above_ball, 1.0)
+    time.sleep(1.0)
+
+    # Apertura della pinza
+    reachy.r_arm.r_gripper.goal_position = -60  # Posizione per aprire la pinza
+    time.sleep(1.0)
+
+    # Raggiungere la pallina
+    move_arm(ball_position, 2.0)
+    time.sleep(2.0)
+
+    # Chiusura della pinza per afferrare la pallina
+    reachy.r_arm.r_gripper.goal_position = -40  # Posizione per chiudere la pinza
+    time.sleep(0.5)
+
+    # Alzare il braccio con la pallina
+    move_arm(above_ball, 2.0)
+    time.sleep(1.0)
+
+    # Spegnere il braccio in modo graduale
+    reachy.turn_off_smoothly('r_arm')
+
+# Codice eseguibile principale
+if __name__ == "__main__":
+    # Connessione al robot Reachy
+    reachy = ReachySDK(host='localhost')
+
+    # Eseguire il movimento di afferraggio
+    grasp_ball()
+
+    # Uscire dal programma
+    exit()
+```
+
+### Descrizione del Codice
+
+1. **Funzione `look_at(target)`**: Questa funzione fa sì che la testa del robot guardi verso le coordinate specificate.
+
+2. **Funzione `move_arm(target, duration)`**: Muove il braccio del robot verso la posizione target calcolando le giunture necessarie usando la cinematica inversa. La durata del movimento è specificata come parametro.
+
+3. **Funzione `grasp_ball()`**:
+   - Calcola la posizione della pallina da basket a destra e sopra il centro del tavolo.
+   - Fa guardare il robot verso la pallina.
+   - Muove il braccio sopra la pallina e poi lo posiziona direttamente sopra di essa.
+   - Apre la pinza, si sposta verso la pallina, e poi chiude la pinza per afferrarla.
+   - Infine, alza il braccio con la pallina.
+
+4. **Codice principale**: Stabilisce la connessione con il robot Reachy e chiama la funzione `grasp_ball()` per eseguire l'azione di afferraggio.
+
+### Note
+- Assicurati di adattare le coordinate della pallina (`ball_position`) in base alla tua configurazione specifica.
+- Verifica che il robot sia correttamente configurato e pronto per l'esecuzione prima di avviare lo script.
+
+User: esci
+Chat terminata.
+PS C:\Users\stefa>

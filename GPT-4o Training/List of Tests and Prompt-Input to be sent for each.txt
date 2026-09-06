@@ -1,0 +1,112 @@
+TEST n.1 (TEST PILOTA)
+
+Movimenti richiesti:
+1. Afferrare una Pallina da Basket
+
+Dare in Pasto a GPT i seguenti dati:
+- Script del Grasping
+- NO Immagini della Scena del Simulatore
+
+Prompt da Usare:
+Sulla base degli script Python che ti ho lasciato in allegato, 
+sviluppa uno script Python che permetta a Reachy di afferrare una 
+pallina da basket sul tavolo (quindi che compia un'azione di 
+grasping).
+
+In particolare, la pallina da basket è situata un po' di centimetri 
+più a destra rispetto alla visuale frontale inziale di Reachy, un 
+po' di centimetri sopra il centro del tavolo.
+
+Esegui le seguenti azioni in ordine: 
+1. rivolgere gli occhi davanti alla pallina da basket da afferrare; 
+2. posizionare la pinza destra sopra la pallina da basket spostando 
+il braccio destro;
+3. aprire la pinza destra;
+4. scendere il braccio destro fino a farlo poggiare sul tavolo;
+5. afferrare la palla; 
+6. chiudere la pinza destra;
+7. sollevare il braccio destro con la pallina nella pinza destra;
+8. riscendere il braccio destro fino a farlo poggiare sul tavolo;
+9. aprire la pinza destra;
+10. rilasciare la pallina sul tavolo;
+11. riportare il braccio destro alla posizione inziale.
+
+Le coordinate del tavolo rispetto al sistema di riferimento di 
+Reachy sono le seguenti: (x,y,z) = (0,3187999,-0,01479991,-1,204).
+Utilizzare la libreria Reachy SDK (versione 0.5.4).
+
+------------------------------------------------------------------------------
+
+TEST n.2 (MOVIMENTI SEMPLICI)
+
+Movimenti richiesti:
+1. Rotazione Testa verso Destra
+2. Rotazione Testa verso Sinistra
+3. Posizionamento Braccio Destro in Alto
+4. Posizionamento Braccio Sinistro in Alto
+5. Simulare il Gesto di Salutare
+6. Simulare il Movimento di Bere
+
+Dare in Pasto a GPT i seguenti dati:
+- Script del Grasping
+- NO Immagini della Scena del Simulatore
+
+Prompt da Usare:
+Sulla base degli script Python che ti ho lasciato in allegato, 
+sviluppa uno script Python che permetta a Reachy di "movimento richiesto".
+
+Utilizzare la libreria Reachy SDK (versione 0.5.4).
+
+------------------------------------------------------------------------------
+
+TEST n.3 (MOVIMENTI COMPLESSI)
+
+Movimenti richiesti:
+1. Afferrare una Pallina da Basket
+2. Mettere una Pallina da Basket su una Tazza
+3. Spostare una Pallina da Basket da Destra verso Sinistra
+4. Spostare una Pallina da Basket da Sinistra verso Destra
+
+Dare in Pasto a GPT i seguenti dati:
+- Script del Grasping
+- NO Immagini della Scena del Simulatore
+- Codice che Serve per Inclinare la Testa verso la Pallina
+
+Prompt da Usare:
+Sulla base degli script Python he ti ho lasciato in allegato, 
+sviluppa uno script Python che permetta a Reachy di "movimento richiesto".
+
+In particolare, la pallina da basket è situata un po' di centimetri 
+più a destra/sinistra rispetto alla visuale frontale inziale di Reachy, 
+un po' di centimetri sopra il centro del tavolo.
+
+Le coordinate del tavolo rispetto al sistema di riferimento di 
+Reachy sono le seguenti: (x,y,z) = (0,3187999,-0,01479991,-1,204).
+Utilizzare la libreria Reachy SDK (versione 0.5.4).
+
+------------------------------------------------------------------------------
+
+TEST n.4 (MOVIMENTI COMPLESSI CON INPUT VISIVO)
+
+Movimenti richiesti:
+1. Afferrare una Pallina da Basket
+2. Mettere una Pallina da Basket su una Tazza
+3. Spostare una Pallina da Basket da Destra verso Sinistra
+4. Spostare una Pallina da Basket da Sinistra verso Destra
+
+Dare in Pasto a GPT i seguenti dati:
+- Script del Grasping
+- Immagini della Scena del Simulatore
+- Codice che Serve per Inclinare la Testa verso la Pallina
+
+Prompt da Usare:
+Sulla base degli script Python he ti ho lasciato in allegato, 
+sviluppa uno script Python che permetta a Reachy di "movimento richiesto".
+
+In particolare, la pallina da basket è situata un po' di centimetri 
+più a destra/sinistra rispetto alla visuale frontale inziale di Reachy, 
+un po' di centimetri sopra il centro del tavolo.
+
+Le coordinate del tavolo rispetto al sistema di riferimento di 
+Reachy sono le seguenti: (x,y,z) = (0,3187999,-0,01479991,-1,204).
+Utilizzare la libreria Reachy SDK (versione 0.5.4).
